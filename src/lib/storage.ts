@@ -5,6 +5,10 @@ const IDEAS_STORAGE_KEY = 'mind-map-idea-studio-ideas';
 const FOLDERS_STORAGE_KEY = 'mind-map-idea-studio-folders';
 const PROJECTS_STORAGE_KEY = 'mind-map-projects';
 const SELECTED_PROJECT_STORAGE_KEY = 'mind-map-selected-project-id';
+const CURRENT_USER_ID_STORAGE_KEY = 'mind-map-current-user-id';
+
+const namespacedKey = (baseKey: string, userId?: string | null) =>
+  userId ? `${baseKey}:${userId}` : baseKey;
 
 export const saveMindMap = (nodes: NodeMap) => {
   localStorage.setItem(MINDMAP_STORAGE_KEY, JSON.stringify(nodes));
@@ -57,18 +61,22 @@ export const loadFolders = (): Folder[] => {
   }
 };
 
-export const saveProjects = (projects: Project[]) => {
-  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+export const saveProjects = (projects: Project[], userId?: string | null) => {
+  localStorage.setItem(namespacedKey(PROJECTS_STORAGE_KEY, userId), JSON.stringify(projects));
 };
 
-export const loadProjects = (): Project[] => {
-  const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+export const loadProjects = (userId?: string | null): Project[] => {
+  const raw = localStorage.getItem(namespacedKey(PROJECTS_STORAGE_KEY, userId));
   if (raw) {
     try {
       return JSON.parse(raw) as Project[];
     } catch {
       return [];
     }
+  }
+
+  if (userId) {
+    return [];
   }
 
   const legacyNodes = loadMindMap();
@@ -102,17 +110,35 @@ export const loadProjects = (): Project[] => {
   ];
 };
 
-export const saveSelectedProjectId = (projectId: string | null) => {
+export const saveSelectedProjectId = (projectId: string | null, userId?: string | null) => {
   if (!projectId) {
-    localStorage.removeItem(SELECTED_PROJECT_STORAGE_KEY);
+    localStorage.removeItem(namespacedKey(SELECTED_PROJECT_STORAGE_KEY, userId));
     return;
   }
 
-  localStorage.setItem(SELECTED_PROJECT_STORAGE_KEY, projectId);
+  localStorage.setItem(namespacedKey(SELECTED_PROJECT_STORAGE_KEY, userId), projectId);
 };
 
-export const loadSelectedProjectId = (): string | null =>
-  localStorage.getItem(SELECTED_PROJECT_STORAGE_KEY);
+export const loadSelectedProjectId = (userId?: string | null): string | null =>
+  localStorage.getItem(namespacedKey(SELECTED_PROJECT_STORAGE_KEY, userId));
+
+export const saveCurrentUserId = (userId: string | null) => {
+  if (!userId) {
+    localStorage.removeItem(CURRENT_USER_ID_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(CURRENT_USER_ID_STORAGE_KEY, userId);
+};
+
+export const loadCurrentUserId = (): string | null =>
+  localStorage.getItem(CURRENT_USER_ID_STORAGE_KEY);
+
+export const clearLegacyStandaloneStorage = () => {
+  localStorage.removeItem(MINDMAP_STORAGE_KEY);
+  localStorage.removeItem(IDEAS_STORAGE_KEY);
+  localStorage.removeItem(FOLDERS_STORAGE_KEY);
+};
 
 export const buildProjectEdges = (nodes: NodeMap): ProjectEdge[] =>
   Object.values(nodes)

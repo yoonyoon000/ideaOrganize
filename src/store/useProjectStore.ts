@@ -2,18 +2,24 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import {
   buildProjectEdges,
+  clearLegacyStandaloneStorage,
+  loadCurrentUserId,
   loadProjects,
   loadSelectedProjectId,
+  saveCurrentUserId,
   saveProjects,
   saveSelectedProjectId
 } from '../lib/storage';
 import type { Folder, Idea, NodeMap, NodePosition, Project } from '../types';
 
 type ProjectStore = {
+  currentUserId: string | null;
   projects: Project[];
   selectedProjectId: string | null;
   selectedNodeId: string | null;
   editingNodeId: string | null;
+  setCurrentUserId: (userId: string) => void;
+  clearCurrentUserId: () => void;
   createProject: (title?: string) => string;
   selectProject: (id: string) => void;
   updateProjectTitle: (id: string, title: string) => void;
@@ -86,9 +92,9 @@ const deleteRecursively = (nodes: NodeMap, id: string): NodeMap => {
   return nextNodes;
 };
 
-const persist = (projects: Project[], selectedProjectId: string | null) => {
-  saveProjects(projects);
-  saveSelectedProjectId(selectedProjectId);
+const persist = (projects: Project[], selectedProjectId: string | null, userId: string | null) => {
+  saveProjects(projects, userId);
+  saveSelectedProjectId(selectedProjectId, userId);
 };
 
 const getProjectIndex = (projects: Project[], selectedProjectId: string | null) =>
@@ -98,28 +104,67 @@ const getDefaultSelectedNodeId = (project: Project | undefined) =>
   project ? Object.keys(project.mindMapData.nodes)[0] ?? null : null;
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
-  const projects = loadProjects();
-  const storedSelectedId = loadSelectedProjectId();
+  const currentUserId = loadCurrentUserId();
+  clearLegacyStandaloneStorage();
+  const projects = loadProjects(currentUserId);
+  const storedSelectedId = loadSelectedProjectId(currentUserId);
   const selectedProjectId =
     storedSelectedId && projects.some((project) => project.id === storedSelectedId)
       ? storedSelectedId
       : projects[0]?.id ?? null;
 
   if (projects.length > 0) {
-    persist(projects, selectedProjectId);
+    persist(projects, selectedProjectId, currentUserId);
   }
 
   return {
+    currentUserId,
     projects,
     selectedProjectId,
     selectedNodeId: getDefaultSelectedNodeId(projects.find((project) => project.id === selectedProjectId)),
     editingNodeId: null,
+    setCurrentUserId: (userId) => {
+      const trimmed = userId.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      const nextProjects = loadProjects(trimmed);
+      const nextSelectedProjectId = loadSelectedProjectId(trimmed);
+      const resolvedSelectedProjectId =
+        nextSelectedProjectId && nextProjects.some((project) => project.id === nextSelectedProjectId)
+          ? nextSelectedProjectId
+          : nextProjects[0]?.id ?? null;
+
+      saveCurrentUserId(trimmed);
+      persist(nextProjects, resolvedSelectedProjectId, trimmed);
+
+      set({
+        currentUserId: trimmed,
+        projects: nextProjects,
+        selectedProjectId: resolvedSelectedProjectId,
+        selectedNodeId: getDefaultSelectedNodeId(
+          nextProjects.find((project) => project.id === resolvedSelectedProjectId)
+        ),
+        editingNodeId: null
+      });
+    },
+    clearCurrentUserId: () => {
+      saveCurrentUserId(null);
+      set({
+        currentUserId: null,
+        projects: [],
+        selectedProjectId: null,
+        selectedNodeId: null,
+        editingNodeId: null
+      });
+    },
     createProject: (title) => {
       const project = createProjectRecord(title?.trim() || '새 프로젝트');
 
       set((state) => {
         const nextProjects = [project, ...state.projects];
-        persist(nextProjects, project.id);
+        persist(nextProjects, project.id, state.currentUserId);
 
         return {
           projects: nextProjects,
@@ -138,7 +183,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           return state;
         }
 
-        persist(state.projects, id);
+        persist(state.projects, id, state.currentUserId);
 
         return {
           selectedProjectId: id,
@@ -164,7 +209,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             : project
         );
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -219,7 +264,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
 
         return {
           projects: nextProjects,
@@ -277,7 +322,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
 
         return {
           projects: nextProjects,
@@ -319,7 +364,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
 
         return {
           projects: nextProjects,
@@ -358,7 +403,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -395,7 +440,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
 
         return {
           projects: nextProjects,
@@ -435,7 +480,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -472,7 +517,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ideas: [idea, ...project.ideas]
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
 
@@ -501,7 +546,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           )
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -520,7 +565,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ideas: project.ideas.filter((idea) => idea.id !== id)
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -547,7 +592,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           )
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -577,7 +622,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ]
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     },
@@ -606,7 +651,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           )
         };
 
-        persist(nextProjects, state.selectedProjectId);
+        persist(nextProjects, state.selectedProjectId, state.currentUserId);
         return { projects: nextProjects };
       });
     }

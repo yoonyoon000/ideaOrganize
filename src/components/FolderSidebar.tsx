@@ -6,13 +6,15 @@ type FolderSidebarProps = {
   selectedFolderId: string | 'all';
   onSelect: (folderId: string | 'all') => void;
   onCreateFolder: (name: string) => void;
+  onDeleteFolder: (folderId: string) => void;
 };
 
 export default function FolderSidebar({
   folders,
   selectedFolderId,
   onSelect,
-  onCreateFolder
+  onCreateFolder,
+  onDeleteFolder
 }: FolderSidebarProps) {
   const [name, setName] = useState('');
 
@@ -27,14 +29,27 @@ export default function FolderSidebar({
         전체 아이디어
       </button>
       {folders.map((folder) => (
-        <button
-          key={folder.id}
-          type="button"
-          className={selectedFolderId === folder.id ? 'folder-item folder-item-active' : 'folder-item'}
-          onClick={() => onSelect(folder.id)}
-        >
-          {folder.name}
-        </button>
+        <div key={folder.id} className="folder-row">
+          <button
+            type="button"
+            className={selectedFolderId === folder.id ? 'folder-item folder-item-active' : 'folder-item'}
+            onClick={() => onSelect(folder.id)}
+          >
+            {folder.name}
+          </button>
+          <button
+            type="button"
+            className="folder-delete-button"
+            aria-label="폴더 삭제"
+            onClick={() => {
+              if (window.confirm('이 폴더를 삭제하겠습니까?')) {
+                onDeleteFolder(folder.id);
+              }
+            }}
+          >
+            ×
+          </button>
+        </div>
       ))}
       <div className="folder-create">
         <input

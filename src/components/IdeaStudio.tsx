@@ -6,19 +6,19 @@ import type { Folder, Idea } from '../types';
 type IdeaStudioProps = {
   ideas: Idea[];
   folders: Folder[];
-  onCreateIdea: () => void;
   onOpenIdea: (id: string) => void;
   onToggleBookmark: (id: string) => void;
   onCreateFolder: (name: string) => void;
+  onDeleteFolder: (id: string) => void;
 };
 
 export default function IdeaStudio({
   ideas,
   folders,
-  onCreateIdea,
   onOpenIdea,
   onToggleBookmark,
-  onCreateFolder
+  onCreateFolder,
+  onDeleteFolder
 }: IdeaStudioProps) {
   const [query, setQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | 'all'>('all');
@@ -46,6 +46,7 @@ export default function IdeaStudio({
         selectedFolderId={selectedFolderId}
         onSelect={setSelectedFolderId}
         onCreateFolder={onCreateFolder}
+        onDeleteFolder={onDeleteFolder}
       />
 
       <div className="idea-studio-main">
@@ -62,9 +63,6 @@ export default function IdeaStudio({
             onClick={() => setOnlyBookmarked((current) => !current)}
           >
             ⭐ 북마크 보기
-          </button>
-          <button type="button" className="primary-button" onClick={onCreateIdea}>
-            새 아이디어
           </button>
         </div>
 

@@ -37,6 +37,7 @@ const edgeTypes = {
 type MindMapPageProps = {
   project: Project;
   onGoHome: () => void;
+  onLogout: () => void;
 };
 
 type HighlightState = {
@@ -62,7 +63,7 @@ const shouldShowOnboarding = (nodes: NodeMap) => {
   return values.length === 1 && values[0]?.text === '생각하고 싶은 아이디어';
 };
 
-function MindMapWorkspace({ project, onGoHome }: MindMapPageProps) {
+function MindMapWorkspace({ project, onGoHome, onLogout }: MindMapPageProps) {
   const { fitView } = useReactFlow();
   const [workspaceMode, setWorkspaceMode] = useState<'mindmap' | 'studio' | 'detail'>('mindmap');
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
@@ -83,6 +84,7 @@ function MindMapWorkspace({ project, onGoHome }: MindMapPageProps) {
     updateIdea,
     toggleBookmark,
     createFolder,
+    deleteFolder,
     updateProjectTitle
   } = useProjectStore();
 
@@ -314,6 +316,7 @@ function MindMapWorkspace({ project, onGoHome }: MindMapPageProps) {
         projectTitle={project.title}
         onChangeProjectTitle={(title) => updateProjectTitle(project.id, title)}
         onGoHome={onGoHome}
+        onLogout={onLogout}
         workspaceMode={workspaceMode}
         onOpenMindMap={() => setWorkspaceMode('mindmap')}
         onOpenStudio={() => {
@@ -331,13 +334,13 @@ function MindMapWorkspace({ project, onGoHome }: MindMapPageProps) {
         <IdeaStudio
           ideas={ideas}
           folders={folders}
-          onCreateIdea={() => handleCreateIdea()}
           onOpenIdea={(ideaId) => {
             setSelectedIdeaId(ideaId);
             setWorkspaceMode('detail');
           }}
           onToggleBookmark={toggleBookmark}
           onCreateFolder={createFolder}
+          onDeleteFolder={deleteFolder}
         />
       ) : workspaceMode === 'detail' && selectedIdea ? (
         <IdeaDetail

@@ -3,6 +3,7 @@ dist
 dist-server
 .env
 .DS_Store
+firebase-debug.log
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts

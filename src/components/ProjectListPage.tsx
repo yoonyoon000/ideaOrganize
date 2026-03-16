@@ -6,12 +6,14 @@ type ProjectListPageProps = {
   projects: Project[];
   onCreateProject: () => void;
   onOpenProject: (id: string) => void;
+  onLogout: () => void;
 };
 
 export default function ProjectListPage({
   projects,
   onCreateProject,
-  onOpenProject
+  onOpenProject,
+  onLogout
 }: ProjectListPageProps) {
   const sortedProjects = useMemo(
     () => [...projects].sort((a, b) => b.updatedAt - a.updatedAt),
@@ -26,9 +28,14 @@ export default function ProjectListPage({
           <h1>프로젝트 리스트</h1>
           <p className="subtext">브레인스토밍 마인드맵을 프로젝트 단위로 만들고 다시 열 수 있습니다.</p>
         </div>
-        <button type="button" className="primary-button" onClick={onCreateProject}>
-          새 프로젝트 만들기
-        </button>
+        <div className="project-list-actions">
+          <button type="button" className="secondary-button" onClick={onLogout}>
+            로그아웃
+          </button>
+          <button type="button" className="primary-button" onClick={onCreateProject}>
+            새 프로젝트 만들기
+          </button>
+        </div>
       </div>
 
       <section className="project-list-panel">

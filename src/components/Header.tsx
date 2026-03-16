@@ -5,6 +5,7 @@ type HeaderProps = {
   projectTitle: string;
   onChangeProjectTitle: (title: string) => void;
   onGoHome: () => void;
+  onLogout: () => void;
   workspaceMode: 'mindmap' | 'studio' | 'detail';
   onOpenMindMap: () => void;
   onOpenStudio: () => void;
@@ -16,6 +17,7 @@ export default function Header({
   projectTitle,
   onChangeProjectTitle,
   onGoHome,
+  onLogout,
   workspaceMode,
   onOpenMindMap,
   onOpenStudio,
@@ -82,6 +84,9 @@ export default function Header({
 
       <div className="header-actions">
         <HomeButton href="/" onClick={onGoHome} />
+        <button type="button" className="secondary-button" onClick={onLogout}>
+          로그아웃
+        </button>
         <div className="header-group">
           <span className="header-group-label">작업 공간</span>
           <div className="view-toggle">

@@ -54,6 +54,13 @@ export default function IdeaDetail({
         <button type="button" className="detail-back-button" onClick={onBack} aria-label="이전으로">
           ←
         </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => exportIdeaAsPdf(idea, folders)}
+        >
+          PDF로 내보내기
+        </button>
       </div>
 
       <div className="idea-detail-grid">
@@ -253,6 +260,87 @@ const normalizeUrl = (value: string) => {
 
   return `https://${value}`;
 };
+
+const exportIdeaAsPdf = (idea: Idea, folders: Folder[]) => {
+  const folderName = folders.find((folder) => folder.id === idea.folderId)?.name ?? '폴더 없음';
+  const printWindow = window.open('', '_blank', 'width=960,height=720');
+
+  if (!printWindow) {
+    window.alert('PDF 창을 열 수 없습니다. 팝업 차단을 확인해주세요.');
+    return;
+  }
+
+  const escapedTitle = escapeHtml(idea.title);
+  const escapedDescription = escapeHtml(idea.description?.trim() || '');
+  const escapedFolder = escapeHtml(folderName);
+  const referenceLinks = idea.referenceLinks
+    .map((link) => `<li><a href="${escapeAttribute(link)}">${escapeHtml(link)}</a></li>`)
+    .join('');
+
+  printWindow.document.write(`
+    <html lang="ko">
+      <head>
+        <title>${escapedTitle}</title>
+        <style>
+          body { font-family: Pretendard, 'Noto Sans KR', sans-serif; padding: 40px; color: #16324f; }
+          h1 { margin: 0 0 16px; font-size: 28px; }
+          h2 { margin: 28px 0 12px; font-size: 16px; }
+          p, li { line-height: 1.7; }
+          .meta { color: #64809c; margin-bottom: 20px; }
+          .block { border: 1px solid #d8e2ee; border-radius: 16px; padding: 16px; background: #f8fbfe; }
+          ul { padding-left: 20px; }
+          img { max-width: 100%; border-radius: 12px; margin-top: 10px; page-break-inside: avoid; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapedTitle}</h1>
+        <div class="meta">폴더: ${escapedFolder}</div>
+        <h2>아이디어 메모</h2>
+        <div class="block">${escapedDescription || '메모 없음'}</div>
+        <h2>레퍼런스 링크</h2>
+        <div class="block">${referenceLinks ? `<ul>${referenceLinks}</ul>` : '링크 없음'}</div>
+        <h2>레퍼런스 첨부</h2>
+        <div class="block">
+          ${idea.referenceImages.length > 0
+            ? idea.referenceImages.map((file) => renderPrintableAsset(file, '레퍼런스')).join('')
+            : '첨부 없음'}
+        </div>
+        <h2>스케치 첨부</h2>
+        <div class="block">
+          ${idea.sketchImages.length > 0
+            ? idea.sketchImages.map((file) => renderPrintableAsset(file, '스케치')).join('')
+            : '첨부 없음'}
+        </div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+};
+
+const renderPrintableAsset = (file: string, label: string) => {
+  if (file.startsWith('data:application/pdf')) {
+    return `<p>${label} PDF 첨부</p>`;
+  }
+
+  return `<img src="${file}" alt="${label}" />`;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\n/g, '<br />');
+
+const escapeAttribute = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 function AssetPreview({
   file,

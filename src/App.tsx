@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import MindMapPage from './components/MindMapPage';
 import ProjectListPage from './components/ProjectListPage';
+import UserEntryPage from './components/UserEntryPage';
 import { useProjectStore } from './store/useProjectStore';
 
 export default function App() {
-  const { projects, selectedProjectId, createProject, selectProject } = useProjectStore();
+  const {
+    currentUserId,
+    projects,
+    selectedProjectId,
+    createProject,
+    clearCurrentUserId,
+    selectProject,
+    setCurrentUserId
+  } = useProjectStore();
   const [pathname, setPathname] = useState(() => window.location.pathname);
 
   useEffect(() => {
@@ -42,10 +51,18 @@ export default function App() {
     [projects, selectedProjectId]
   );
 
+  if (!currentUserId) {
+    return <UserEntryPage onSubmit={setCurrentUserId} />;
+  }
+
   if (!routeProjectId || !selectedProject || selectedProject.id !== routeProjectId) {
     return (
       <ProjectListPage
         projects={projects}
+        onLogout={() => {
+          clearCurrentUserId();
+          navigate('/');
+        }}
         onCreateProject={() => {
           const projectId = createProject();
           navigate(`/projects/${projectId}`);
@@ -58,5 +75,14 @@ export default function App() {
     );
   }
 
-  return <MindMapPage project={selectedProject} onGoHome={() => navigate('/')} />;
+  return (
+    <MindMapPage
+      project={selectedProject}
+      onGoHome={() => navigate('/')}
+      onLogout={() => {
+        clearCurrentUserId();
+        navigate('/');
+      }}
+    />
+  );
 }

@@ -127,7 +127,7 @@ function MindMapNodeCard({ id, data, selected }: NodeProps) {
               );
             }}
           >
-            이 노드 구체화하기
+            아이디어 구체화하기
           </button>
           <button
             type="button"
