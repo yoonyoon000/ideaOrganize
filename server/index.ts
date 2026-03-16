@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import express from 'express';
 import { nanoid } from 'nanoid';
 import OpenAI from 'openai';
+import { generateIdeaSuggestion } from './brainstorm/generateIdeaSuggestion.js';
+import type { BrainstormPromptInput } from './brainstorm/promptBuilders.js';
 
 dotenv.config();
 
@@ -12,6 +14,8 @@ const model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const client = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+type AiActionType = BrainstormPromptInput['actionType'];
 
 app.use(cors());
 app.use(express.json());
@@ -35,6 +39,54 @@ const extractKeywords = (text: string) => {
     .filter((token) => !['아이디어', '기능', '서비스', '시스템', '화면', '사용자'].includes(token));
 };
 
+const actionLabelMap: Record<AiActionType, string> = {
+  expand: '확장',
+  opposite: '반대',
+  extreme: '극단화',
+  combine: '결합'
+};
+
+app.post('/api/brainstorm', async (request, response) => {
+  const input = request.body as Partial<BrainstormPromptInput>;
+
+  if (!input.currentNodeTitle?.trim() || !input.actionType) {
+    response.status(400).json({ message: '아이디어 텍스트 또는 액션이 비어 있습니다.' });
+    return;
+  }
+
+  const safeInput: BrainstormPromptInput = {
+    currentNodeTitle: input.currentNodeTitle.trim(),
+    parentNodeTitle: input.parentNodeTitle?.trim(),
+    siblingNodeTitles: Array.isArray(input.siblingNodeTitles) ? input.siblingNodeTitles : [],
+    childNodeTitles: Array.isArray(input.childNodeTitles) ? input.childNodeTitles : [],
+    actionType: input.actionType,
+    userGoal: '브레인스토밍 확장',
+    language: 'ko'
+  };
+
+  try {
+    const structured = await generateIdeaSuggestion({
+      client,
+      model,
+      input: safeInput
+    });
+
+    response.json({
+      suggestion: {
+        action: safeInput.actionType,
+        title: actionLabelMap[safeInput.actionType],
+        analysis: structured.analysis,
+        suggestion: structured.suggestion,
+        nextNodeCandidates: structured.nextNodeCandidates,
+        content: `${structured.analysis}\n\n${structured.suggestion}`
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'AI 제안 생성에 실패했습니다.' });
+  }
+});
+
 app.post('/api/group-ideas', async (request, response) => {
   const { ideas } = request.body as {
     ideas?: Array<{ id: string; text: string; parentText?: string | null }>;
@@ -49,10 +101,7 @@ app.post('/api/group-ideas', async (request, response) => {
     const bucket = new Map<string, Set<string>>();
 
     ideas.forEach((idea) => {
-      const keywords = new Set([
-        normalizeText(idea.text),
-        ...extractKeywords(idea.text)
-      ]);
+      const keywords = new Set([normalizeText(idea.text), ...extractKeywords(idea.text)]);
 
       keywords.forEach((keyword) => {
         if (!keyword || keyword.length < 2) {

@@ -1,13 +1,17 @@
-import type { NodeMap } from '../types';
+import type { Folder, Idea, NodeMap, Project, ProjectEdge } from '../types';
 
-const STORAGE_KEY = 'mind-map-brainstorm-kr';
+const MINDMAP_STORAGE_KEY = 'mind-map-brainstorm-kr';
+const IDEAS_STORAGE_KEY = 'mind-map-idea-studio-ideas';
+const FOLDERS_STORAGE_KEY = 'mind-map-idea-studio-folders';
+const PROJECTS_STORAGE_KEY = 'mind-map-projects';
+const SELECTED_PROJECT_STORAGE_KEY = 'mind-map-selected-project-id';
 
 export const saveMindMap = (nodes: NodeMap) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
+  localStorage.setItem(MINDMAP_STORAGE_KEY, JSON.stringify(nodes));
 };
 
 export const loadMindMap = (): NodeMap | null => {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(MINDMAP_STORAGE_KEY);
   if (!raw) {
     return null;
   }
@@ -18,3 +22,103 @@ export const loadMindMap = (): NodeMap | null => {
     return null;
   }
 };
+
+export const saveIdeas = (ideas: Idea[]) => {
+  localStorage.setItem(IDEAS_STORAGE_KEY, JSON.stringify(ideas));
+};
+
+export const loadIdeas = (): Idea[] => {
+  const raw = localStorage.getItem(IDEAS_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(raw) as Idea[];
+  } catch {
+    return [];
+  }
+};
+
+export const saveFolders = (folders: Folder[]) => {
+  localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(folders));
+};
+
+export const loadFolders = (): Folder[] => {
+  const raw = localStorage.getItem(FOLDERS_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(raw) as Folder[];
+  } catch {
+    return [];
+  }
+};
+
+export const saveProjects = (projects: Project[]) => {
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+};
+
+export const loadProjects = (): Project[] => {
+  const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Project[];
+    } catch {
+      return [];
+    }
+  }
+
+  const legacyNodes = loadMindMap();
+  const legacyIdeas = loadIdeas();
+  const legacyFolders = loadFolders();
+
+  if (!legacyNodes && legacyIdeas.length === 0 && legacyFolders.length === 0) {
+    return [];
+  }
+
+  const now = Date.now();
+  const nodes = legacyNodes ?? {};
+  const rootNode = Object.values(nodes).find((node) => node.parentId === null);
+
+  return [
+    {
+      id: `legacy-${now}`,
+      title:
+        rootNode && rootNode.text !== '생각하고 싶은 아이디어'
+          ? rootNode.text
+          : '기존 프로젝트',
+      createdAt: now,
+      updatedAt: now,
+      mindMapData: {
+        nodes,
+        edges: buildProjectEdges(nodes)
+      },
+      ideas: legacyIdeas,
+      folders: legacyFolders
+    }
+  ];
+};
+
+export const saveSelectedProjectId = (projectId: string | null) => {
+  if (!projectId) {
+    localStorage.removeItem(SELECTED_PROJECT_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(SELECTED_PROJECT_STORAGE_KEY, projectId);
+};
+
+export const loadSelectedProjectId = (): string | null =>
+  localStorage.getItem(SELECTED_PROJECT_STORAGE_KEY);
+
+export const buildProjectEdges = (nodes: NodeMap): ProjectEdge[] =>
+  Object.values(nodes)
+    .filter((node) => node.parentId !== null)
+    .map((node) => ({
+      id: `${node.parentId}-${node.id}`,
+      source: node.parentId!,
+      target: node.id
+    }));
