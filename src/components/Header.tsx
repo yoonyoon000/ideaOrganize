@@ -83,7 +83,7 @@ export default function Header({
       </div>
 
       <div className="header-actions">
-        <HomeButton href="/" onClick={onGoHome} />
+        <HomeButton href="#/" onClick={onGoHome} />
         <button type="button" className="secondary-button" onClick={onLogout}>
           로그아웃
         </button>

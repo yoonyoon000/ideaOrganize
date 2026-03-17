@@ -8,7 +8,7 @@ type ProjectListItemProps = {
 export default function ProjectListItem({ project, onOpen }: ProjectListItemProps) {
   return (
     <a
-      href={`/projects/${project.id}`}
+      href={`#/projects/${project.id}`}
       className="project-list-item"
       onClick={(event) => {
         event.preventDefault();

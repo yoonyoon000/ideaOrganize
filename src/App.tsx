@@ -14,27 +14,34 @@ export default function App() {
     selectProject,
     setCurrentUserId
   } = useProjectStore();
-  const [pathname, setPathname] = useState(() => window.location.pathname);
+  const [routePath, setRoutePath] = useState(() => getRoutePath());
 
   useEffect(() => {
-    const handlePopState = () => {
-      setPathname(window.location.pathname);
+    const handleRouteChange = () => {
+      setRoutePath(getRoutePath());
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('hashchange', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('hashchange', handleRouteChange);
+    };
   }, []);
 
   const routeProjectId = useMemo(() => {
-    const match = pathname.match(/^\/projects\/([^/]+)$/);
+    const match = routePath.match(/^\/projects\/([^/]+)$/);
     return match ? decodeURIComponent(match[1]) : null;
-  }, [pathname]);
+  }, [routePath]);
 
   const navigate = (nextPath: string) => {
-    if (window.location.pathname !== nextPath) {
-      window.history.pushState({}, '', nextPath);
+    const normalizedPath = nextPath.startsWith('/') ? nextPath : `/${nextPath}`;
+    const nextHash = `#${normalizedPath}`;
+
+    if (window.location.hash !== nextHash) {
+      window.history.pushState({}, '', nextHash);
     }
-    setPathname(nextPath);
+    setRoutePath(normalizedPath);
   };
 
   useEffect(() => {
@@ -86,3 +93,8 @@ export default function App() {
     />
   );
 }
+
+const getRoutePath = () => {
+  const hash = window.location.hash.replace(/^#/, '');
+  return hash || '/';
+};
